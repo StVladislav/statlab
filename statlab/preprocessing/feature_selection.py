@@ -513,12 +513,11 @@ class FeatureSelector:
 
     Note
     ----------
-    # TODO about DEFAULT_PARAMS
-    Examples
-    --------
-    >>> train = sts.norm(loc=0, scale=1).rvs((100, 3))
-    >>> feature_selected = FeatureSelector(train)
-    >>> feature_selected.summary(fill_na=np.median, endog_index=1)
+
+    Example:
+        >>> train = sts.norm(loc=0, scale=1).rvs((100, 3))
+        >>> feature_selected = FeatureSelector(train)
+        >>> feature_selected.summary(fill_na=np.median, endog_index=1)
     """
 
     DEFAULT_PARAMS = {
