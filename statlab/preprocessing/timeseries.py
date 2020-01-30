@@ -3,6 +3,7 @@ import scipy.stats as sts
 
 from scipy.signal import periodogram
 
+from stats_utils import array_fill_nan
 from errors import LengthCriteria, IncorrectType, IncorrectValue
 
 
@@ -183,8 +184,15 @@ def lagged_feature(series: np.ndarray, lagg: int = 1, endog: bool = False, dropn
     return lagged
 
 
-def lagged_matrix(series: np.ndarray, lagg: int = 1, endog: bool = False,
-                  full: bool = True, exog: np.ndarray = None, dropna: bool = False) -> np.ndarray:
+def lagged_matrix(
+        series,
+        fill = None,
+        lagg: int = 1,
+        endog: bool = False,
+        full: bool = True,
+        exog: np.ndarray = None,
+        dropna: bool = False
+) -> np.ndarray:
     """Create lagged matrix from input array
 
     EXAMPLE:
@@ -213,6 +221,11 @@ def lagged_matrix(series: np.ndarray, lagg: int = 1, endog: bool = False,
 
     if endog:
         final_matrix = np.column_stack((series, final_matrix))
+
+    if fill is not None: # FIXME add check shape
+        final_matrix = final_matrix if len(final_matrix.shape) == 2 else final_matrix.reshape(-1, 1)
+        for i in range(final_matrix.shape[1]):
+            final_matrix[:, i] = array_fill_nan(final_matrix[:, i], fill=fill).ravel()
 
     if dropna:
         final_matrix = final_matrix[~np.isnan(final_matrix).any(axis=1)]
