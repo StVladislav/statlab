@@ -258,13 +258,13 @@ class TimeSeriesCv:
     def __init__(self, n_splits: int = 3):
         self.n_splits = n_splits
 
-    def split(self, X: np.ndarray, y: np.ndarray, groups=None):
+    def split(self, X: np.ndarray):
         indexes = np.arange(len(X))
 
         for i in range(self.n_splits, X.shape[0], self.n_splits):
-            yield (indexes[i-self.n_splits : i], indexes[i-self.n_splits : i])
+            yield indexes[i - self.n_splits: i], indexes[i - self.n_splits: i]
 
-    def get_n_splits(self, X: np.ndarray, y: np.ndarray, groups=None):
+    def get_n_splits(self):
         return self.n_splits
 
 
