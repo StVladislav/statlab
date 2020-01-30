@@ -194,6 +194,14 @@ def lagged_matrix(
         dropna: bool = False
 ) -> np.ndarray:
     """Create lagged matrix from input array
+    Arguments
+    --------------
+    series - np.ndarray: series with values (e.g. prices)
+    fill - value of callable function: how to fill nan values
+    lagg - int: number of laggs
+    endog - bool: if True included endog variable at the first column
+    full - bool: include all laggs in return matrix
+    exog - array like:  if exist added to return matrix
 
     EXAMPLE:
         >>> t = np.array([1,2,3,4,5,6,7,8,9])
