@@ -11,10 +11,10 @@ class DiscreteDistributionsParams:
     @staticmethod
     def initialize_params(dist: str, x: np.ndarray) -> tuple:
         distribution_params = dict(
-            poisson=(np.mean(x), ),
-            dlaplace=(np.random.exponential(0.5), ),
-            bernoulli=(sum(x==1) / len(x), ),
-            planck=(np.random.uniform(0.2, 0.7), ),
+            poisson=(np.mean(x),),
+            dlaplace=(np.random.exponential(0.5),),
+            bernoulli=(sum(x == 1) / len(x),),
+            planck=(np.random.uniform(0.2, 0.7),),
             binom=(len(x), max(np.unique(x)))
         )
 
@@ -22,7 +22,6 @@ class DiscreteDistributionsParams:
 
 
 class DiscreteDistributionEstimator(DiscreteDistributionsParams):
-
     DEFAULT_DISTRIBUTIONS = (
         'poisson',
         'dlaplace',
@@ -79,7 +78,6 @@ class DiscreteDistributionEstimator(DiscreteDistributionsParams):
 
 
 class ContinousDistributionEstimator:
-
     DEFAULT_DISTRIBUTIONS = (
         'norm',
         't',
@@ -97,7 +95,6 @@ class ContinousDistributionEstimator:
             self.dist = (dist,) if isinstance(dist, str) else dist
         else:
             self.dist = self.DEFAULT_DISTRIBUTIONS
-
 
     @staticmethod
     def calc_loglike(dist: str, params: tuple, x: np.ndarray) -> float:
@@ -130,12 +127,12 @@ if __name__ == '__main__':
     y_d = sts.poisson(10).rvs(size=100)
     fit_dist = ContinousDistributionEstimator()
     fit_dist.fit(y_c)
-    print(fit_dist.dist) # best distribution using negative loglikelihood
-    print(fit_dist.function.mean) # expeted mean of best distribution
-    print(fit_dist.function.interval(0.95)) # 95% interval of dist
+    print(fit_dist.dist)  # best distribution using negative loglikelihood
+    print(fit_dist.function.mean())  # expeted mean of best distribution
+    print(fit_dist.function.interval(0.95))  # 95% interval of dist
 
     fit_dist_d = DiscreteDistributionEstimator()
     fit_dist_d.fit(y_d)
-    print(fit_dist_d.dist) # best distribution using negative loglikelihood
-    print(fit_dist_d.function.mean) # expeted mean of best distribution
-    print(fit_dist_d.function.interval(0.95)) # 95% interval of dist
+    print(fit_dist_d.dist)  # best distribution using negative loglikelihood
+    print(fit_dist_d.function.mean())  # expeted mean of best distribution
+    print(fit_dist_d.function.interval(0.95))  # 95% interval of dist
