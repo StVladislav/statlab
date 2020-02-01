@@ -22,6 +22,7 @@ class DiscreteDistributionsParams:
 
 
 class DiscreteDistributionEstimator(DiscreteDistributionsParams):
+
     DEFAULT_DISTRIBUTIONS = (
         'poisson',
         'dlaplace',
