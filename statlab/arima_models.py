@@ -100,7 +100,7 @@ class ArimaModel:
 
     @property
     def calculate_aic(self) -> np.float:
-        try:
+        try: #FIXME
             aic = 2 * self.k + len(self.y) * np.log(self.rss)
         except RuntimeWarning:
             print('Loglike is negative or equal to 0. '
@@ -111,7 +111,7 @@ class ArimaModel:
 
     @property
     def calculate_sic(self) -> np.float:
-        try:
+        try: #FIXME
             sic = 2 * np.log(self.y.shape[0]) * self.k + 2 * np.log(self.loglike)
         except RuntimeWarning:
             print('Loglike is negative or equal to 0. '
