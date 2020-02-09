@@ -25,6 +25,7 @@ def maxdrawdown(series: np.ndarray) -> tuple:
     drawdowns = []
     drawdowns_time = []
     drawdowns_begin = []
+    drawdowns_yields = []
 
     current_dd = None
     start_time_dd = None
@@ -42,6 +43,7 @@ def maxdrawdown(series: np.ndarray) -> tuple:
                 possible_dd = series[i]
         elif series[i] > current_dd:
             drawdowns.append(possible_dd - current_dd)
+            drawdowns_yields.append(possible_dd / current_dd)
             drawdowns_time.append(i - start_time_dd - 1)
             current_dd = None
             start_time_dd = None
@@ -50,10 +52,20 @@ def maxdrawdown(series: np.ndarray) -> tuple:
     max_drawdown = np.min(drawdowns)
 
     if current_dd is not None:
-        max_drawdown = possible_dd - current_dd
-        print(f'Drawdown is not over yet! Current max drawdown is {possible_dd - current_dd}')
+        max_drawdown = possible_dd / current_dd
+        print(f'Drawdown is not over yet! Current max drawdown is {max_drawdown}')
 
-    return max_drawdown, dict(drawdowns=np.array(drawdowns), drawdowns_time=np.array(drawdowns_time)), drawdowns_begin
+    to_ret = (
+        max_drawdown,
+        dict(
+            drawdowns=np.array(drawdowns),
+            drawdowns_yield=np.array(drawdowns_yields),
+            drawdowns_time=np.array(drawdowns_time)
+        ),
+        drawdowns_begin
+    )
+
+    return to_ret
 
 
 def kupiec_test():
