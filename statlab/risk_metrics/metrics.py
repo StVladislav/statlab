@@ -14,8 +14,13 @@ def maxdrawdown(series: np.ndarray) -> tuple:
        >>> dd = maxdrawdown(y)
        >>> dd[0] # This is calculated maxdrawdown
 
-    Return tuple; 0 - value of maxdrawdown; 1 - dict: drowdowns - all drawdowns;
-    drawdowns_time - time of each drawdown; 2 - list of event start indices
+    Return tuple;
+    0 - value of maxdrawdown;
+    1 - dict:
+        drowdowns - all drawdowns;
+        drawdowns_time - time of each drawdown;
+        drawdowns_yield - all drawdowns as pct changes
+    2 - list of event start indices
     ----------------
     P.S. If series at last iteration has drawdown
     algorithm will notify about it.
