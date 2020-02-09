@@ -30,7 +30,7 @@ def maxdrawdown(series: np.ndarray) -> tuple:
     drawdowns = []
     drawdowns_time = []
     drawdowns_begin = []
-    drawdowns_yields = []
+    drawdowns_yield = []
 
     current_dd = None
     start_time_dd = None
@@ -48,7 +48,7 @@ def maxdrawdown(series: np.ndarray) -> tuple:
                 possible_dd = series[i]
         elif series[i] > current_dd:
             drawdowns.append(possible_dd - current_dd)
-            drawdowns_yields.append(possible_dd / current_dd)
+            drawdowns_yield.append(possible_dd / current_dd)
             drawdowns_time.append(i - start_time_dd - 1)
             current_dd = None
             start_time_dd = None
@@ -64,7 +64,7 @@ def maxdrawdown(series: np.ndarray) -> tuple:
         max_drawdown,
         dict(
             drawdowns=np.array(drawdowns),
-            drawdowns_yield=np.array(drawdowns_yields),
+            drawdowns_yield=np.array(drawdowns_yield),
             drawdowns_time=np.array(drawdowns_time)
         ),
         drawdowns_begin
