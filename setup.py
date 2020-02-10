@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
      name='statlab',
-     version='0.1',
+     version='0.2',
      scripts=['statlab_doc'] ,
      author="StVladislav",
      author_email="sv6382@gmail.com",
