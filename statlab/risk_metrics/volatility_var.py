@@ -3,7 +3,7 @@ import numpy as np
 from graphs.plot import plot_lines
 from distributions import ContinousDistributionEstimator
 from risk_metrics.simple_var import ValueAtRisk
-from volatility_models.ewma import EwmaVolatilityModels
+from volatility_models.ewma import EWMAVolatilityModels
 
 
 class ValueAtRiskEWMA(ValueAtRisk):
@@ -12,7 +12,6 @@ class ValueAtRiskEWMA(ValueAtRisk):
     methodology with consideration of volatility prediction.
     The most simple example of volatility predictions can be
     EWMA model estimations.
-
     """
     def __init__(self, prices, dist: tuple = None):
         super(ValueAtRiskEWMA, self).__init__(prices=prices)
@@ -43,7 +42,7 @@ class ValueAtRiskEWMA(ValueAtRisk):
 if __name__ == '__main__':
     np.random.seed(10)
     y = np.random.normal(loc=0, scale=1, size=100).cumsum() + 1100
-    simple_ewma = EwmaVolatilityModels(y).ewma_simple()
+    simple_ewma = EWMAVolatilityModels(y).ewma_simple()
     fitted_sigma = simple_ewma.fitted_vol**0.5
     ewma_var = ValueAtRiskEWMA(y).fit(fitted_sigma, 0.05)
     plot_lines((ewma_var.log_ret, ewma_var.historical_risks), title='Log ret VS EWMA Value-at-Risk')
