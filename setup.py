@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
      name='statlab',
-     version='0.8',
+     version='0.9',
      scripts=['statlab_doc'] ,
      author="StVladislav",
      author_email="sv6382@gmail.com",
@@ -15,8 +15,8 @@ setuptools.setup(
      url="https://github.com/StVladislav/statlab",
      packages=setuptools.find_packages(),
      classifiers=[
-         "Programming Language :: Python :: 3",
-         "License :: OSI Approved :: MIT License",
-         "Operating System :: OS Independent",
+         "Programming Language: Python 3.5+",
+         "License: MIT License",
+         "Operating System: OS Independent",
      ],
  )
