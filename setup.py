@@ -15,8 +15,8 @@ setuptools.setup(
      url="https://github.com/StVladislav/statlab",
      packages=setuptools.find_packages(),
      classifiers=[
-         "Programming Language: Python 3.5+",
-         "License: MIT License",
-         "Operating System: OS Independent",
+         "Programming Language :: Python :: 3",
+         "License :: OSI Approved :: MIT License",
+         "Operating System :: OS Independent",
      ],
  )
