@@ -27,7 +27,6 @@ In progress
 * **Vladislav Stashevski**: *Initial work* - [Statlab](https://github.com/StVladislav/statlab)
 * **Contacts**:
 [LinkedIn](https://www.linkedin.com/in/stvladislav-01861a189/)
-[Mail](sv6382@gmail.com)
 
 ## License
 
