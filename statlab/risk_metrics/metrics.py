@@ -79,5 +79,9 @@ def kupiec_test():
     pass
 
 
+class AltmanZscore:
+    pass
+
+
 if __name__ == '__main__':
     pass

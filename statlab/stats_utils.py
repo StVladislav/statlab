@@ -1,5 +1,7 @@
 import datetime
+
 import numpy as np
+import scipy.stats as sts
 
 
 def array_drop_nan(y, axis: int = 0) -> np.ndarray:
@@ -99,6 +101,13 @@ def timer(func):
 
 def mean_absolute_percentage_error(y_true: np.ndarray, y_fit: np.ndarray) -> float:
     return np.mean(np.abs((y_true - y_fit) / y_true)) * 100
+
+
+def sample_entropy(x, bins: int = 10):
+    """Calculate sample entropy
+    using frequency distribution of data x
+    """
+    return sts.entropy(sts.relfreq(x, numbins=bins)[0])
 
 
 class Counter:

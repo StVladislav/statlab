@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.stats as sts
 
 from graphs.plot import plot_lines
 from distributions import ContinousDistributionEstimator
@@ -22,11 +23,10 @@ class ValueAtRiskEWMA(ValueAtRisk):
 
     def fit(self, fitted_sigma: np.ndarray, alpha: float = 0.05):
 
-        standard_value = self.log_ret / fitted_sigma
-        standard_distribution = ContinousDistributionEstimator(self.dist)
-        standard_distribution.fit(standard_value)
+        estimated_distribution = ContinousDistributionEstimator(self.dist)
+        estimated_distribution.fit(self.log_ret)
 
-        self.historical_risks[:] = self.function.mean() + fitted_sigma * standard_distribution.function.ppf(alpha)
+        self.historical_risks[:] = self.function.mean() + fitted_sigma * sts.norm.ppf(alpha)
         self.current_risk = self.historical_risks[-1]
 
         return self
