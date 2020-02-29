@@ -34,11 +34,11 @@ def encoder_data_frame(
 ) -> pd.DataFrame:
 
     if encoding_type not in ("OneHot", "LabelEncoding"):
-        raise TypeError("Incorret type of encoding")
+        raise TypeError("Incorret type of encoding!")
 
     for i in encod_columns:
         if i not in df.columns:
-            raise ValueError("Data frame has not encod_columns")
+            raise ValueError("Data frame has not encod_columns!")
 
     encoder = {
         "OneHot": one_hot_encoder,
