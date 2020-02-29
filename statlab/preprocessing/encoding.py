@@ -5,6 +5,7 @@ from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 
 
 def one_hot_encoder(y, sparse: bool = False):
+
     val = np.array(y)
     encoder = OneHotEncoder(sparse=sparse)
 
@@ -16,7 +17,8 @@ def one_hot_encoder(y, sparse: bool = False):
     return encoded.transform(val), encoded.categories_[0]
 
 
-def label_encoder(y, ):
+def label_encoder(y):
+
     val = np.array(y).ravel()
     encoder = LabelEncoder()
     encoded = encoder.fit(val)
@@ -24,8 +26,14 @@ def label_encoder(y, ):
     return encoded.transform(val), val
 
 
-def encoder_data_frame(df: pd.DataFrame, encod_columns: list, type: str = "OneHot", **kwargs):
-    if type not in ("OneHot", "LabelEncoding"):
+def encoder_data_frame(
+        df: pd.DataFrame,
+        encod_columns: list,
+        encoding_type: str = "OneHot",
+        **kwargs
+) -> pd.DataFrame:
+
+    if encoding_type not in ("OneHot", "LabelEncoding"):
         raise TypeError("Incorret type of encoding")
 
     for i in encod_columns:
@@ -42,9 +50,9 @@ def encoder_data_frame(df: pd.DataFrame, encod_columns: list, type: str = "OneHo
 
     for item in encod_columns:
         val = list(data_frame.pop(item).values())
-        encoded = encoder[type](val, **kwargs)
+        encoded = encoder[encoding_type](val, **kwargs)
 
-        if type == "LabelEncoding":
+        if encoding_type == "LabelEncoding":
             data_frame[item] = dict(zip(index, encoded[0]))
         else:
             for i in range(len(encoded[1])):
@@ -59,5 +67,5 @@ def encoder_data_frame(df: pd.DataFrame, encod_columns: list, type: str = "OneHo
 if __name__ == '__main__':
     x = dict(sex=['male', 'female', 'male', 'female'], id=[1, 2, 3, 4])
     x = pd.DataFrame.from_dict(x)
-    one_hot = encoder_data_frame(x, encod_columns=['sex'], type='OneHot')
-    label = encoder_data_frame(x, encod_columns=['sex'], type='LabelEncoding')
+    one_hot = encoder_data_frame(x, encod_columns=['sex'], encoding_type='OneHot')
+    label = encoder_data_frame(x, encod_columns=['sex'], encoding_type='LabelEncoding')
