@@ -56,7 +56,8 @@ def encoder_data_frame(
             data_frame[item] = dict(zip(index, encoded[0]))
         else:
             for i in range(len(encoded[1])):
-                data_frame[encoded[1][i]] = dict(zip(index, encoded[0][:, i]))
+                label = item + '.' + encoded[1][i]
+                data_frame[label] = dict(zip(index, encoded[0][:, i]))
 
     data_frame = pd.DataFrame.from_dict(data_frame)
     data_frame.index = index

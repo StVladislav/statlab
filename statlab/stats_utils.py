@@ -110,6 +110,41 @@ def sample_entropy(x, bins: int = 10):
     return sts.entropy(sts.relfreq(x, numbins=bins)[0])
 
 
+def correlation_tolerance(matrix, tol: float = 0.5, labels: list = None):
+    matrix = np.array(matrix, dtype=np.float32)
+
+    if matrix.shape[0] != matrix.shape[1]:
+        raise ValueError('Matrix must be semtric')
+
+    tol = -np.inf if tol is None else tol
+    upper_triu = np.triu_indices(matrix.shape[0])
+    labels = labels if labels is not None else upper_triu[1]
+    correlation = dict.fromkeys(labels)
+
+    for i, j in zip(upper_triu[0], upper_triu[1]):
+        if i == j:
+            continue
+
+        current_value = matrix[i, j]
+
+        if correlation[labels[i]] is None:
+            correlation[labels[i]] = dict()
+
+        if np.abs(current_value) >= tol:
+            correlation[labels[i]][labels[j]] = current_value
+
+    return correlation
+
+
+def top_correlation(array, count: int = 10, labels: list = None):
+
+    array = np.array(array, dtype=np.float32)
+    labels = labels if labels is not None else np.arange(len(array))
+    indexies = np.argsort(array)
+
+    return array[indexies][-count:], labels[indexies]
+
+
 class Counter:
     """Realized counter of smth
     This class may be used if need to create custom
