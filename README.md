@@ -15,7 +15,7 @@ You need to have python installed and the following packages: numpy, scipy, stat
 To install this package you can run the following command
 
 ```
-pip install statlab
+pip install git+https://github.com/SLprojects/statlab
 ```
 
 ## Running the tests
