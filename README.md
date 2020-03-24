@@ -24,7 +24,7 @@ In progress
 
 ## Authors
 
-* **Vladislav Stashevski**: *Initial work* - [Statlab](https://github.com/StVladislav/statlab)
+* **SL**: *Initial work* - [Statlab](https://github.com/SLprojects/statlab)
 * **Contacts**:
 [LinkedIn](https://www.linkedin.com/in/stvladislav-01861a189/)
 
