@@ -7,7 +7,7 @@ setuptools.setup(
      name='statlab',
      version='0.9.1',
      scripts=['statlab_doc'] ,
-     author="SL",
+     author="St.Vladislav",
      author_email="sv6382@gmail.com",
      description="Statlab package",
      long_description=long_description,
