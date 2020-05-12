@@ -24,8 +24,8 @@ In progress
 
 ## Authors
 
-* **SL**: *Initial work* - [Statlab](https://github.com/SLprojects/statlab)
-* **Contacts**:
+* **St.Vladislav**: *Initial work* - [Statlab](https://github.com/SLprojects/statlab)
+* **Contacts**: sv6382@gmail.com
 
 
 ## License
