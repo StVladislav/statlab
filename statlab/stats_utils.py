@@ -1,7 +1,9 @@
 import datetime
 
 import numpy as np
+import pandas as pd
 import scipy.stats as sts
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 
 
 def array_drop_nan(y, axis: int = 0) -> np.ndarray:
@@ -143,6 +145,207 @@ def top_correlation(array, count: int = 10, labels: list = None):
     indexies = np.argsort(array)
 
     return array[indexies][-count:], labels[indexies]
+
+
+def sort_dictionary_by_value(dictionary: dict):
+    return dict(sorted(dictionary.items(), key=lambda x: x[1], reverse=True))
+
+
+def sample_data(x, sample_size=30):
+    uniq = set(x)
+    indeses = []
+
+    for i in uniq:
+        indeses.extend(np.random.choice(list(np.where(x == i)[0]), int(sample_size / len(uniq))))
+
+    np.random.shuffle(indeses)
+
+    return indeses
+
+
+def dataframe_col_values_by_func(df, to_replace, function: callable) -> pd.DataFrame:
+    data = np.array(df)
+    cols = df.columns
+
+    for col in range(data.shape[1]):
+        data_col = data[:, col]
+        value = function(data_col[data_col != to_replace].astype(float))
+        data_col[data_col == to_replace] = value
+
+    return pd.DataFrame(data, columns=cols)
+
+
+def dataframe_label_encoder(dataframe: pd.DataFrame, sparse: bool = False) -> tuple:
+    cols = dataframe.columns
+    encoder_function = LabelEncoder()
+    encoded_data = np.array(dataframe)
+
+    for i in range(encoded_data.shape[1]):
+        encoder_function.fit(encoded_data[:, i])
+        encoded_data[:, i] = encoder_function.transform(encoded_data[:, i])
+
+    return pd.DataFrame(encoded_data, columns=cols), encoder_function
+
+
+def dataframe_onehot_encoder(dataframe: pd.DataFrame, sparse: bool = False) -> tuple:
+    cols = dataframe.columns
+    encoder_function = OneHotEncoder(sparse=sparse)
+    encoder = encoder_function.fit(dataframe)
+    encoder_cols = []
+    encoder_data = encoder.transform(dataframe)
+
+    for i in range(len(encoder.categories_)):
+        for j in encoder.categories_[i]:
+            encoder_cols.append(cols[i] + '.' + j)
+
+    return pd.DataFrame(encoder_data, columns=encoder_cols), encoder
+
+
+def dataframe_drop_by_row_value(dataframe, check, return_index: bool = False):
+    cols = dataframe.columns
+    data = np.ravel(dataframe.values)
+    index = []
+
+    for i in range(len(data)):
+        if check != data[i]:
+            index.append(i)
+
+    to_ret = pd.DataFrame(data[index], columns=cols)
+
+    if return_index:
+        return to_ret, index
+
+    return to_ret
+
+
+def dataframe_columns_by_type(dataframe, cols_type, value_to_change='empty'):
+    index = []
+
+    for col in cols_type.keys():
+        train = np.array(dataframe[col].values)
+
+        for i in range(len(train)):
+            if not isinstance(train[i], cols_type[col]):
+                index.append(i)
+
+        if index:
+            dataframe[col].iloc[index] = value_to_change
+
+    return dataframe
+
+
+def dataframe_column_not_str(dataframe: pd.DataFrame) -> tuple:
+    """
+    Separate dataframe to dataframes with columns wich are contained string values and
+    are not contained string values
+
+    Parameters
+    ----------
+    dataframe - dataframe like pandas
+
+    Returns
+    -------
+    tuple:
+    0 index - dataframe without columns it contained string values
+    1 index - dataframe with columns it contained string values
+    """
+    data = np.array(dataframe)
+    cols = dataframe.columns
+    cols_not_str = []
+    cols_str = []
+
+    for i in range(data.shape[1]):
+        for j in data[:, i]:
+            if not isinstance(j, str):
+                cols_not_str.append(cols[i])
+                break
+
+    for i in cols:
+        if i not in cols_not_str:
+            cols_str.append(i)
+
+    data_not_str = dataframe[cols_not_str]
+    data_str = dataframe[cols_str]
+
+    return data_not_str, data_str
+
+
+def dataframe_row_index_by_type(dataframe, _type=str):
+    rows = []
+    data = np.array(dataframe)
+
+    for i in range(data.shape[0]):
+        for value in data[i, :]:
+            if isinstance(value, _type):
+                rows.append(i)
+                break
+
+    return rows
+
+
+def dataframe_replacer(dataframe, value, to) -> pd.DataFrame:
+    """
+    Replace values in dataframte to required values
+
+    Parameters
+    ----------
+    dataframe - dataframe like pandas
+    value - what will be replaced
+    to - value to be replaced
+
+    Returns
+    -------
+    pandas.DataFrame with replaced values
+    """
+    cols = dataframe.columns
+    data = np.array(dataframe)
+
+    if not isinstance(value, list):
+        value = [value]
+
+    for i in range(data.shape[0]):
+        for j in range(data.shape[1]):
+            if data[i, j] in value:
+                data[i, j] = to
+
+    return pd.DataFrame(data, columns=cols)
+
+
+def dataframe_nan_replacer(dataframe, to):
+    """
+    Replace np.nan values in dataframe
+    Parameters
+    ----------
+    dataframe - dataframe like pandas
+    to - value to be replaced nan
+
+    Returns
+    -------
+    pandas.DataFrame with replaced np.nan values
+    """
+    cols = dataframe.columns
+    data = np.array(dataframe)
+
+    for i in range(data.shape[0]):
+        for j in range(data.shape[1]):
+            if isinstance(data[i, j], float) or isinstance(data[i, j], int):
+                if np.isnan(data[i, j]):
+                    data[i, j] = to
+
+    return pd.DataFrame(data, columns=cols)
+
+
+def dataframe_replacer_by_type(dataframe, _type, to) -> pd.DataFrame:
+    cols = dataframe.columns
+    data = np.array(dataframe)
+
+    for i in range(data.shape[0]):
+        for j in range(data.shape[1]):
+
+            if isinstance(data[i, j], _type):
+                data[i, j] = to
+
+    return pd.DataFrame(data, columns=cols)
 
 
 class Counter:

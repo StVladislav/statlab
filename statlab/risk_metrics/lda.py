@@ -57,7 +57,7 @@ class LossDistributionApproach:
 
         events = self.discrete_distribution.function.rvs(self.samples)
         losses = np.array([
-            sum(self.continuous_distribution.function.rvs(i)) for i in events
+            self.continuous_distribution.function.rvs(i) for i in events
         ])
 
         return events, losses
