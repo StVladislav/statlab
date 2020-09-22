@@ -12,7 +12,7 @@ def array_drop_nan(y, axis: int = 0) -> np.ndarray:
 
     Parameters
     ----------
-    x : array_like or pandas DataFrame/Series with nan-values
+    y : array_like or pandas DataFrame/Series with nan-values
         The array which contains or does not contain nan-values.
     axis : integer (default = 0)
         This parameter determines by which axis nan-values are dropped.
@@ -175,7 +175,7 @@ def dataframe_col_values_by_func(df, to_replace, function: callable) -> pd.DataF
     return pd.DataFrame(data, columns=cols)
 
 
-def dataframe_label_encoder(dataframe: pd.DataFrame, sparse: bool = False) -> tuple:
+def dataframe_label_encoder(dataframe: pd.DataFrame) -> tuple:
     cols = dataframe.columns
     encoder_function = LabelEncoder()
     encoded_data = np.array(dataframe)
