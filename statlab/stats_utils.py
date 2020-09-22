@@ -462,7 +462,7 @@ class NumpyDataFrame:
         _, key = self.get_by_key(key)
         self.data[tuple(key)] = data
 
-    def repr(self):
+    def __repr__(self):
         return str(pd.DataFrame(self.data, columns=self.columns))
 
 
