@@ -311,7 +311,7 @@ def dataframe_replacer(dataframe, value, to) -> pd.DataFrame:
     return pd.DataFrame(data, columns=cols)
 
 
-def dataframe_nan_replacer(dataframe, to):
+def dataframe_nan_replacer(dataframe, to) -> pd.DataFrame:
     """
     Replace np.nan values in dataframe
     Parameters
@@ -362,6 +362,108 @@ class Counter:
 
     def increase(self):
         self.current += 1
+
+
+class NumpyDataFrame:
+    """
+    This class simplify interaction with pandas.DataFrame
+    and increases speed as it used numpy.
+    Instance of this class may sliced by rows/columns. As well
+    instance may set new data by indexing. Both ordinal numbers
+    and their names (from pandas) can be used as column indexes.
+    Also it may replaced nan values by value or function.
+
+    EXAMPLE:
+        >>> df = pd.DataFrame(np.random.normal(size=(10,4)), columns=['a', 'b'. 'c', 'd'])
+        >>> new = NumpyDataFrame(df)
+        >>> new[1:3, 0:3]
+        >>> new[[1,2,3,4,5], 'a']
+        >>> new[[1,2,3], ['a', 'b', 'c']]
+        >>> new[1:5, ['a', 'b', 'c']]
+        >>> new[1:8, 'a']
+        >>> new[1:3, 'd'] = 0.5
+
+    """
+    def __init__(self, df: pd.DataFrame):
+
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError
+
+        self.columns = df.columns
+        self.data = np.array(df)
+        self._columns = {i: j for i, j in zip(self.columns, np.arange(df.shape[1]))}
+
+    @property
+    def get_nans_value(self) -> dict:
+        """
+        Get all indeses it containes Nans value.
+        Nans value are defined in mask below.
+        :return: dict with key - ordinal number of column; value - list of indeses rows
+        """
+        nan_mask = ('None', 'NaT', 'nan', 'Nan', 'NaN', 'NULL')
+        nans_value_index = dict()
+
+        for col in range(self.data.shape[1]):
+            nans_in_row = []
+            for row in range(self.data.shape[0]):
+                if str(self.data[row, col]) in nan_mask:
+                    nans_in_row.append(row)
+            if nans_in_row:
+                nans_value_index[col] = nans_in_row
+
+        return nans_value_index
+
+    def replace_nan(self, replaced_by):
+        """
+        Replace nan value
+        replaced_by: value of callable object which replaced Nans values
+        """
+        nans_value_index = self.get_nans_value
+
+        if not nans_value_index:
+            return
+
+        for col, rows in nans_value_index.items():
+            if callable(replaced_by):
+                self.data[rows, col] = replaced_by(
+                    [self.data[i, col] for i in range(self.data.shape[0]) if i not in rows])
+            else:
+                self.data[rows, col] = replaced_by
+
+    @property
+    def get_data_frame(self) -> pd.DataFrame:
+        """
+        Return padnas.DataFrame
+        """
+        return pd.DataFrame(self.data, columns=self.columns)
+
+    def get_by_key(self, key) -> tuple:
+        """
+        This method used __getitem__ and __setitem__
+        """
+        if isinstance(key, int) or isinstance(key, str):
+            new = self.data[:, key if isinstance(key, int) else self._columns[key]]
+        else:
+            key = list(key)
+            if isinstance(key[1], str):
+                key[1] = self._columns[key[1]]
+            if isinstance(key[1], list):
+                key[1] = [self._columns[i] if isinstance(i, str) else i for i in key[1]]
+            if isinstance(key[0], list) and isinstance(key[1], list):
+                key[0], key[1] = np.ix_(key[0], key[1])
+            new = self.data[key[0], key[1]]
+
+        return new, key
+
+    def __getitem__(self, key):
+        return self.get_by_key(key)[0]
+
+    def __setitem__(self, key, data):
+        _, key = self.get_by_key(key)
+        self.data[tuple(key)] = data
+
+    def repr(self):
+        return str(pd.DataFrame(self.data, columns=self.columns))
 
 
 if __name__ == '__main__':
