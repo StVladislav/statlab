@@ -384,14 +384,17 @@ class NumpyDataFrame:
         >>> new[1:3, 'd'] = 0.5
 
     """
-    def __init__(self, df: pd.DataFrame):
-
+    def __init__(self, df):
         if not isinstance(df, pd.DataFrame):
             raise TypeError
-
-        self.columns = df.columns
+        self.columns = df.columns.tolist()
         self.data = np.array(df)
-        self._columns = {i: j for i, j in zip(self.columns, np.arange(df.shape[1]))}
+        self._columns = self.update_columns
+        self._nan_mask = ('None', 'NaT', 'nan', 'Nan', 'NaN', 'NULL')
+
+    @property
+    def update_columns(self):
+        return {i: j for i, j in zip(self.columns, np.arange(self.data.shape[1]))}
 
     @property
     def get_nans_value(self) -> dict:
@@ -400,13 +403,12 @@ class NumpyDataFrame:
         Nans value are defined in mask below.
         :return: dict with key - ordinal number of column; value - list of indeses rows
         """
-        nan_mask = ('None', 'NaT', 'nan', 'Nan', 'NaN', 'NULL')
         nans_value_index = dict()
 
         for col in range(self.data.shape[1]):
             nans_in_row = []
             for row in range(self.data.shape[0]):
-                if str(self.data[row, col]) in nan_mask:
+                if str(self.data[row, col]) in self._nan_mask:
                     nans_in_row.append(row)
             if nans_in_row:
                 nans_value_index[col] = nans_in_row
@@ -430,12 +432,108 @@ class NumpyDataFrame:
             else:
                 self.data[rows, col] = replaced_by
 
+    def drop_nan(self):
+        pass
+
+    @property
+    def get_col_types(self) -> dict:
+        col_types = dict.fromkeys(self.columns, None)
+
+        for col in self.columns:
+            col_type = []
+            for value in self.data[:, self._columns[col]]:
+                if str(value) in self._nan_mask:
+                    col_type.append('nan')
+                    continue
+                col_type.append(type(value).name)
+            col_type = np.array(col_type)
+            mode = sts.mode(col_type)[0][0]
+            col_types[col] = dict(main_type=mode, proportion=sum(col_type == mode) / len(col_type))
+
+        return col_types
+
+    def replace_mode_col_type(self, value=None, replace_nan: bool = False):
+        col_types = self.get_col_types
+
+        for col in self.columns:
+            for i in range(self.data.shape[0]):
+                if col_types[col]['proportion'] < 1:
+                    if replace_nan and str(self.data[i, self._columns[col]]) in self._nan_mask:
+                        self.data[i, self._columns[col]] = value
+                        continue
+                    try:
+                        new_value = eval('np.' + col_types[col]['main_type'])(self.data[i, self._columns[col]])
+                    except Exception:
+                        new_value = value
+                    self.data[i, self._columns[col]] = new_value
+
     @property
     def get_data_frame(self) -> pd.DataFrame:
         """
         Return padnas.DataFrame
         """
         return pd.DataFrame(self.data, columns=self.columns)
+
+    def add_column(self, new_array, col_name: str = None):
+        new_array = np.asarray(new_array)
+
+        if col_name is None:
+            if len(new_array.shape) > 1:
+                col_name = range(self.data.shape[1] + 1, self.data.shape[1] + 1 + new_array.shape[1])
+            else:
+                col_name = self.data.shape[1] + 1
+
+        if new_array.shape[0] != self.data.shape[0]:
+            raise ValueError
+
+        if len(new_array.shape) > 1:
+            if new_array.shape[1] != len(col_name):
+                raise ValueError
+
+        if col_name is None:
+            col_name = self.data.shape[1] + 1
+
+        self.data = np.c_[self.data, new_array]
+        self.columns.extend(list(col_name))
+        self._columns = self.update_columns
+
+    def drop_column(self, col_name):
+
+        if isinstance(col_name, str):
+            col_name = self._columns[col_name]
+
+        if isinstance(col_name, int):
+            if col_name > self.data.shape[1]:
+                raise ValueError
+
+        if isinstance(col_name, list):
+            for i in range(len(col_name)):
+                if isinstance(col_name[i], str):
+                    col_name[i] = self._columns[col_name[i]]
+
+        self.data = np.delete(self.data, col_name, axis=1)
+        self.columns = np.delete(self.columns, col_name).tolist()
+        self._columns = self.update_columns
+
+    def add_row(self, new_row):
+        new_row = np.asarray(new_row)
+
+        if len(new_row.shape) > 1:
+            if new_row.shape[1] != self.data.shape[1]:
+                raise ValueError
+        else:
+            if new_row.shape[0] != self.data.shape[1]:
+                raise ValueError
+
+        self.data = np.vstack((self.data, new_row))
+
+    def drop_row(self, row_index):
+        if isinstance(row_index, int):
+            if row_index <= self.data.shape[0]:
+                self.data = np.delete(self.data, row_index, axis=0)
+        elif isinstance(row_index, list):
+            if max(row_index) <= self.data.shape[0]:
+                self.data = np.delete(self.data, row_index, axis=0)
 
     def get_by_key(self, key) -> tuple:
         """
