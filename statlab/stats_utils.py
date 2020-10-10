@@ -372,7 +372,6 @@ class NumpyDataFrame:
     instance may set new data by indexing. Both ordinal numbers
     and their names (from pandas) can be used as column indexes.
     Also it may replaced nan values by value or function.
-
     EXAMPLE:
         >>> df = pd.DataFrame(np.random.normal(size=(10,4)), columns=['a', 'b'. 'c', 'd'])
         >>> new = NumpyDataFrame(df)
@@ -382,7 +381,6 @@ class NumpyDataFrame:
         >>> new[1:5, ['a', 'b', 'c']]
         >>> new[1:8, 'a']
         >>> new[1:3, 'd'] = 0.5
-
     """
     def __init__(self, df):
         if not isinstance(df, pd.DataFrame):
@@ -433,7 +431,12 @@ class NumpyDataFrame:
                 self.data[rows, col] = replaced_by
 
     def drop_nan(self):
-        pass
+        """Dropped rows which contained nan values
+        """
+        indeces = []
+        for i in list(self.get_nans_value.values()):
+            indeces.extend(i)
+        self.drop_row(np.unique(indeces).tolist())
 
     @property
     def get_col_types(self) -> dict:
@@ -537,7 +540,7 @@ class NumpyDataFrame:
 
     def get_by_key(self, key) -> tuple:
         """
-        This method used __getitem__ and __setitem__
+        This method used getitem and setitem
         """
         if isinstance(key, int) or isinstance(key, str):
             new = self.data[:, key if isinstance(key, int) else self._columns[key]]
@@ -552,6 +555,12 @@ class NumpyDataFrame:
             new = self.data[key[0], key[1]]
 
         return new, key
+
+    def value_mapper(self, mapper):
+
+        for i in range(self.data.shape[0]):
+            for j in range(self.data.shape[1]):
+                self.data[i, j] = mapper(self.data[i, j])
 
     def __getitem__(self, key):
         return self.get_by_key(key)[0]
