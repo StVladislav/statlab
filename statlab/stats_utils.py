@@ -413,6 +413,25 @@ class NumpyDataFrame:
 
         return nans_value_index
 
+    def replace_nan_by_columns(self, cols: list, replaced_by):
+        nans_value_index: dict = self.get_nans_value
+
+        if not nans_value_index:
+            return
+
+        cols = [self._columns[i] for i in cols if self._columns[i] in nans_value_index.keys()]
+
+        if len(cols) < 1:
+            return
+
+        for col in cols:
+            if callable(replaced_by):
+                self.data[nans_value_index[col], col] = replaced_by(
+                    [self.data[i, col] for i in range(self.data.shape[0]) if i not in self.data[:, col]]
+                )
+            else:
+                self.data[nans_value_index[col], col] = replaced_by
+
     def replace_nan(self, replaced_by):
         """
         Replace nan value
@@ -426,7 +445,8 @@ class NumpyDataFrame:
         for col, rows in nans_value_index.items():
             if callable(replaced_by):
                 self.data[rows, col] = replaced_by(
-                    [self.data[i, col] for i in range(self.data.shape[0]) if i not in rows])
+                    [self.data[i, col] for i in range(self.data.shape[0]) if i not in rows]
+                )
             else:
                 self.data[rows, col] = replaced_by
 
@@ -571,6 +591,7 @@ class NumpyDataFrame:
 
     def __repr__(self):
         return str(pd.DataFrame(self.data, columns=self.columns))
+
 
 
 if __name__ == '__main__':
