@@ -448,7 +448,7 @@ class NumpyDataFrame:
                 if str(value) in self._nan_mask:
                     col_type.append('nan')
                     continue
-                col_type.append(type(value).name)
+                col_type.append(type(value).__name__)
             col_type = np.array(col_type)
             mode = sts.mode(col_type)[0][0]
             col_types[col] = dict(main_type=mode, proportion=sum(col_type == mode) / len(col_type))
