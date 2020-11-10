@@ -413,7 +413,33 @@ class NumpyDataFrame:
 
         return nans_value_index
 
-    def replace_nan_by_columns(self, cols: list, replaced_by):
+    def get_not_nans_value(self, by_column=None):
+
+        not_nans_value_index = dict()
+
+        if by_column is not None:
+            y = self.get_by_key(by_column)[0]
+            not_nans_in_row = []
+
+            for i in range(len(y)):
+                if str(y[i]) not in self._nan_mask:
+                    not_nans_in_row.append(i)
+            if not_nans_in_row:
+                not_nans_value_index[by_column] = not_nans_in_row
+
+            return not_nans_value_index
+
+        for col in range(self.data.shape[1]):
+            nans_in_row = []
+            for row in range(self.data.shape[0]):
+                if str(self.data[row, col]) not in self._nan_mask:
+                    nans_in_row.append(row)
+            if nans_in_row:
+                not_nans_value_index[col] = nans_in_row
+
+        return not_nans_value_index
+
+    def replace_nan_by_columns(self, cols, replaced_by):
         nans_value_index: dict = self.get_nans_value
 
         if not nans_value_index:
@@ -427,7 +453,7 @@ class NumpyDataFrame:
         for col in cols:
             if callable(replaced_by):
                 self.data[nans_value_index[col], col] = replaced_by(
-                    [self.data[i, col] for i in range(self.data.shape[0]) if i not in self.data[:, col]]
+                    [self.data[i, col] for i in range(self.data.shape[0]) if i not in nans_value_index[col]]
                 )
             else:
                 self.data[nans_value_index[col], col] = replaced_by
@@ -457,6 +483,17 @@ class NumpyDataFrame:
         for i in list(self.get_nans_value.values()):
             indeces.extend(i)
         self.drop_row(np.unique(indeces).tolist())
+
+    def drop_full_nan_cols(self):
+        nans_cols = self.get_col_types
+        to_drop = []
+
+        for i, j in nans_cols.items():
+            if j['main_type'] == 'nan' and j['proportion'] >= 0.999:
+                to_drop.append(i)
+
+        if len(to_drop) > 0:
+            self.drop_column(to_drop)
 
     @property
     def get_col_types(self) -> dict:
@@ -589,9 +626,8 @@ class NumpyDataFrame:
         _, key = self.get_by_key(key)
         self.data[tuple(key)] = data
 
-    def __repr__(self):
+    def __str__(self):
         return str(pd.DataFrame(self.data, columns=self.columns))
-
 
 
 if __name__ == '__main__':
