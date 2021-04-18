@@ -145,4 +145,8 @@ class ValueAtRiskMonteCarlo(ValueAtRisk):
 
 
 if __name__ == '__main__':
-    pass
+    x = np.random.normal(size=100)
+    var = ValueAtRiskParametric(x, is_log_yields=True).fit(alpha=0.05)
+    print(var.dist['name'])
+    print(var.dist['params'])
+    print(var.current_risk)
