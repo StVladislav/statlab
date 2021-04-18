@@ -7,18 +7,20 @@ from errors import IncorrectValue
 
 
 class ValueAtRisk:
+    current_risk = None
 
-    def __init__(self, prices):
+    def __init__(self, prices, is_log_yields: bool = False):
         self.prices = np.array(prices, dtype=np.float32)
-        self.log_ret = self.get_log_ret
-        self.current_risk = None
+        self.log_ret = self.get_log_ret if not is_log_yields else prices
         self.historical_risks = self.create_nan_array
 
     @property
     def get_log_ret(self):
 
         if any(self.prices < 0):
-            raise IncorrectValue('ValueAtRisk - init prices must be greater than 0')
+            raise IncorrectValue(
+                'ValueAtRisk - init prices must be greater than 0'
+            )
 
         return np.diff(np.log(self.prices)).astype(np.float32)
 
@@ -36,8 +38,8 @@ class ValueAtRisk:
 
     @property
     def create_nan_array(self):
-        return np.array([None for _ in range(len(self.log_ret))], dtype=np.float32)
-
+        return np.array([None for _ in range(len(self.log_ret))],
+                        dtype=np.float32)
 
 
 class ValueAtRiskHistorical(ValueAtRisk):
@@ -54,26 +56,31 @@ class ValueAtRiskHistorical(ValueAtRisk):
 
 
 class ValueAtRiskParametric(ValueAtRisk):
+    dist = None
 
-    def __init__(self, prices, dist: tuple = None):
-        super(ValueAtRiskParametric, self).__init__(prices=prices)
-        self.dist = dist
-        self.optimized_dist = self.distribution_optimize
-        self.top_dist = self.optimized_dist.dist
-        self.function = self.optimized_dist.function
+    def __init__(self, prices, alpha_dist: float = 0.05,
+                 dist_list: tuple = None, is_log_yields: bool = False):
+        super().__init__(prices=prices, is_log_yields=is_log_yields)
+
+        self.alpha_dist = alpha_dist
+        self.dist_list = dist_list
 
     def fit(self, alpha: float = 0.05):
-        self.current_risk = self.function.ppf(alpha)
+        self.dist = self.distribution_optimize
+        self.current_risk = self.dist['function'].ppf(alpha)
         self.historical_risks[:] = self.current_risk
 
         return self
 
     @property
     def distribution_optimize(self):
-        dist = ContinousDistributionEstimator(self.dist)
+        dist = ContinousDistributionEstimator(
+            self.dist_list,
+            alpha=self.alpha_dist
+        )
         dist.fit(self.log_ret)
 
-        return dist
+        return dist.get_summary
 
 
 class ValueAtRiskMonteCarlo(ValueAtRisk):
@@ -108,11 +115,12 @@ class ValueAtRiskMonteCarlo(ValueAtRisk):
             risk_samples = []
 
             for i in range(self.prediction_horizon - self.init_price_index):
-                log_ret = np.log(self.samples[i+1,:] / self.samples[0, 0])
+                log_ret = np.log(self.samples[i+1, :] / self.samples[0, 0])
                 risk_samples.append(np.percentile(log_ret, alpha * 100))
 
         risk_samples = np.array(risk_samples, dtype=np.float32)
-        self.historical_risks[-(self.prediction_horizon - self.init_price_index):] = risk_samples
+        self.historical_risks[-(self.prediction_horizon -
+                                self.init_price_index):] = risk_samples
 
         return self
 
@@ -137,12 +145,4 @@ class ValueAtRiskMonteCarlo(ValueAtRisk):
 
 
 if __name__ == '__main__':
-    np.random.seed(10)
-    y = np.random.normal(loc=0, scale=1, size=100).cumsum() + 1100
-    historical_var = ValueAtRiskHistorical(y).fit(0.05)
-    parametric_var = ValueAtRiskParametric(y).fit(0.05)
-    montecarlo_var = ValueAtRiskMonteCarlo(y, init_price_index=-1, prediction_horizon=1).fit(0.05)
-    montecarlo_var2 = ValueAtRiskMonteCarlo(y, init_price_index=20, prediction_horizon=len(y)).fit(0.05)
-    print(f'Hisorical VaR is {historical_var.current_risk}\nParametric VaR is {parametric_var.current_risk}\n'
-          f'Monte Carlo VaR is {montecarlo_var.current_risk}\nMonte Carlo long period is'
-          f' {montecarlo_var2.historical_risks}')
+    pass

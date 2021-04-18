@@ -34,6 +34,7 @@ class DiscreteDistributionEstimator(DiscreteDistributionsParams):
 
         self.loglikelihood = None
         self.function = None
+        self.name = None
         self.params = None
 
         if dist is not None:
@@ -51,7 +52,8 @@ class DiscreteDistributionEstimator(DiscreteDistributionsParams):
 
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore')
-            optimization_result = minimize(self.calc_negloglike, x0=params, args=(x, dist), method='SLSQP')
+            optimization_result = minimize(
+                self.calc_negloglike, x0=params, args=(x, dist), method='SLSQP')
 
         return optimization_result
 
@@ -74,8 +76,19 @@ class DiscreteDistributionEstimator(DiscreteDistributionsParams):
                 current_dist = i
 
         self.dist = current_dist
+        self.name = self.function.dist.name
 
-        return self.function
+        return self
+
+    @property
+    def get_summary(self):
+        result = {
+            'function': self.function,
+            'name': self.name,
+            'params': self.params
+        }
+
+        return result
 
 
 class ContinousDistributionEstimator:
@@ -87,10 +100,14 @@ class ContinousDistributionEstimator:
         'gennorm',
     )
 
-    def __init__(self, dist: str or tuple = None):
-        self.loglikelihood = None
+    def __init__(self, dist: str or tuple = None, alpha: float = 0.05):
+        self.alpha = alpha
+        self.loglikelihood = -np.inf
         self.function = None
         self.params = None
+        self.name = None
+        self.loc = None
+        self.scale = None
 
         if dist is not None:
             self.dist = (dist,) if isinstance(dist, str) else dist
@@ -103,24 +120,41 @@ class ContinousDistributionEstimator:
 
     def fit(self, x: np.ndarray):
 
-        current_loglike = -np.inf
         current_dist = None
 
         for i in self.dist:
             params = getattr(sts, i).fit(x)
             function = getattr(sts, i)(*params)
+            kstest_p = sts.kstest(x, function.cdf)[1]
             loglikelihood = self.calc_loglike(i, params, x)
 
-            if loglikelihood > current_loglike:
-                current_loglike = loglikelihood
+            if kstest_p > self.alpha or loglikelihood > self.loglikelihood:
                 self.params = params
                 self.function = function
                 self.loglikelihood = loglikelihood
                 current_dist = i
 
-        self.dist = current_dist
+            if kstest_p > self.alpha:
+                break
 
-        return self.function
+        self.dist = current_dist
+        self.name = self.function.dist.name
+        self.loc = self.function.args[-2]
+        self.scale = self.function.args[-1]
+
+        return self
+
+    @property
+    def get_summary(self):
+        result = {
+            'function': self.function,
+            'loc': self.loc,
+            'scale': self.scale,
+            'name': self.name,
+            'params': self.params
+        }
+
+        return result
 
 
 if __name__ == '__main__':

@@ -1,9 +1,13 @@
 import datetime
+from typing import List
 
 import numpy as np
 import pandas as pd
 import scipy.stats as sts
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder
+
+from distributions import ContinousDistributionEstimator
+from distributions import DiscreteDistributionEstimator
 
 
 def array_drop_nan(y, axis: int = 0) -> np.ndarray:
@@ -156,7 +160,8 @@ def sample_data(x, sample_size=30):
     indeses = []
 
     for i in uniq:
-        indeses.extend(np.random.choice(list(np.where(x == i)[0]), int(sample_size / len(uniq))))
+        indeses.extend(np.random.choice(
+            list(np.where(x == i)[0]), int(sample_size / len(uniq))))
 
     np.random.shuffle(indeses)
 
@@ -365,6 +370,10 @@ class Counter:
 
 
 class NumpyDataFrame:
+    _nan_mask = ('None', 'NaT', 'nan', 'Nan', 'NaN', 'NULL')
+    _basic_num_types = ('float', 'int', 'str')
+    continous_distributions = None
+
     """
     This class simplify interaction with pandas.DataFrame
     and increases speed as it used numpy.
@@ -372,8 +381,12 @@ class NumpyDataFrame:
     instance may set new data by indexing. Both ordinal numbers
     and their names (from pandas) can be used as column indexes.
     Also it may replaced nan values by value or function.
+
     EXAMPLE:
-        >>> df = pd.DataFrame(np.random.normal(size=(10,4)), columns=['a', 'b'. 'c', 'd'])
+        >>> df = pd.DataFrame(
+            np.random.normal(size=(10,4)),
+            columns=['a', 'b', 'c', 'd']
+        )
         >>> new = NumpyDataFrame(df)
         >>> new[1:3, 0:3]
         >>> new[[1,2,3,4,5], 'a']
@@ -382,13 +395,16 @@ class NumpyDataFrame:
         >>> new[1:8, 'a']
         >>> new[1:3, 'd'] = 0.5
     """
+
     def __init__(self, df):
         if not isinstance(df, pd.DataFrame):
-            raise TypeError
+            raise TypeError('df must be pd.DataFrame or '
+                            'use NumpyDataFrame.from_numpy')
+
         self.columns = df.columns.tolist()
+        self.index = df.index
         self.data = np.array(df)
         self._columns = self.update_columns
-        self._nan_mask = ('None', 'NaT', 'nan', 'Nan', 'NaN', 'NULL')
 
     @property
     def update_columns(self):
@@ -445,7 +461,8 @@ class NumpyDataFrame:
         if not nans_value_index:
             return
 
-        cols = [self._columns[i] for i in cols if self._columns[i] in nans_value_index.keys()]
+        cols = [self._columns[i]
+                for i in cols if self._columns[i] in nans_value_index.keys()]
 
         if len(cols) < 1:
             return
@@ -453,7 +470,8 @@ class NumpyDataFrame:
         for col in cols:
             if callable(replaced_by):
                 self.data[nans_value_index[col], col] = replaced_by(
-                    [self.data[i, col] for i in range(self.data.shape[0]) if i not in nans_value_index[col]]
+                    [self.data[i, col] for i in range(
+                        self.data.shape[0]) if i not in nans_value_index[col]]
                 )
             else:
                 self.data[nans_value_index[col], col] = replaced_by
@@ -471,18 +489,21 @@ class NumpyDataFrame:
         for col, rows in nans_value_index.items():
             if callable(replaced_by):
                 self.data[rows, col] = replaced_by(
-                    [self.data[i, col] for i in range(self.data.shape[0]) if i not in rows]
+                    [self.data[i, col]
+                        for i in range(self.data.shape[0]) if i not in rows]
                 )
             else:
                 self.data[rows, col] = replaced_by
 
     def drop_nan(self):
-        """Dropped rows which contained nan values
-        """
+        """Dropped rows which contained nan values"""
         indeces = []
         for i in list(self.get_nans_value.values()):
             indeces.extend(i)
-        self.drop_row(np.unique(indeces).tolist())
+
+        indeces = np.unique(indeces).tolist()
+        self.drop_row(indeces)
+        self._drop_indices(indeces)
 
     def drop_full_nan_cols(self):
         nans_cols = self.get_col_types
@@ -508,9 +529,19 @@ class NumpyDataFrame:
                 col_type.append(type(value).__name__)
             col_type = np.array(col_type)
             mode = sts.mode(col_type)[0][0]
-            col_types[col] = dict(main_type=mode, proportion=sum(col_type == mode) / len(col_type))
+            col_types[col] = dict(main_type=mode, proportion=sum(
+                col_type == mode) / len(col_type))
 
         return col_types
+
+    def _value_by_type(self, value, type_):
+
+        if type_ in self._basic_num_types:
+            new_value = eval(type_)(value)
+        else:
+            new_value = eval('np.' + type_)(value)
+
+        return new_value
 
     def replace_mode_col_type(self, value=None, replace_nan: bool = False):
         col_types = self.get_col_types
@@ -522,9 +553,13 @@ class NumpyDataFrame:
                         self.data[i, self._columns[col]] = value
                         continue
                     try:
-                        new_value = eval('np.' + col_types[col]['main_type'])(self.data[i, self._columns[col]])
+                        new_value = self._value_by_type(
+                            value=self.data[i, self._columns[col]],
+                            type_=col_types[col]['main_type']
+                        )
                     except Exception:
                         new_value = value
+
                     self.data[i, self._columns[col]] = new_value
 
     @property
@@ -532,14 +567,15 @@ class NumpyDataFrame:
         """
         Return padnas.DataFrame
         """
-        return pd.DataFrame(self.data, columns=self.columns)
+        return pd.DataFrame(self.data, columns=self.columns, index=self.index)
 
     def add_column(self, new_array, col_name: str = None):
         new_array = np.asarray(new_array)
 
         if col_name is None:
             if len(new_array.shape) > 1:
-                col_name = range(self.data.shape[1] + 1, self.data.shape[1] + 1 + new_array.shape[1])
+                col_name = range(
+                    self.data.shape[1] + 1, self.data.shape[1] + 1 + new_array.shape[1])
             else:
                 col_name = self.data.shape[1] + 1
 
@@ -595,20 +631,28 @@ class NumpyDataFrame:
             if max(row_index) <= self.data.shape[0]:
                 self.data = np.delete(self.data, row_index, axis=0)
 
+    def _drop_indices(self, indices):
+        ind = range(len(self.index))
+        self.index = self.index[[i for i in ind if i not in indices]]
+
     def get_by_key(self, key) -> tuple:
         """
         This method used getitem and setitem
         """
         if isinstance(key, int) or isinstance(key, str):
-            new = self.data[:, key if isinstance(key, int) else self._columns[key]]
+            new = self.data[:, key if isinstance(
+                key, int) else self._columns[key]]
         else:
             key = list(key)
+
             if isinstance(key[1], str):
                 key[1] = self._columns[key[1]]
             if isinstance(key[1], list):
-                key[1] = [self._columns[i] if isinstance(i, str) else i for i in key[1]]
+                key[1] = [self._columns[i] if isinstance(
+                    i, str) else i for i in key[1]]
             if isinstance(key[0], list) and isinstance(key[1], list):
                 key[0], key[1] = np.ix_(key[0], key[1])
+
             new = self.data[key[0], key[1]]
 
         return new, key
@@ -619,6 +663,76 @@ class NumpyDataFrame:
             for j in range(self.data.shape[1]):
                 self.data[i, j] = mapper(self.data[i, j])
 
+    def cov(self):
+        cov = np.cov(self.data.T)
+        cov = pd.DataFrame(cov, columns=self.columns, index=self.columns)
+
+        return NumpyDataFrame(cov)
+
+    @classmethod
+    def from_numpy(
+        cls,
+        data: np.ndarray,
+        columns: List[str] = None,
+        index: list = None
+    ):
+        if columns is None:
+            columns = ['x' + str(i) for i in range(data.shape[1])]
+
+        if index is None:
+            index = range(data.shape[0])
+
+        return cls(pd.DataFrame(data, columns=columns, index=index))
+
+    def continous_distribution_fit(
+        self,
+        columns: List[str] = None,
+        dist: str or tuple = None,
+        alpha: float = 0.05
+    ):
+        if columns is None:
+            columns = self._columns.keys()
+
+        continous_distributions = dict.fromkeys(columns)
+
+        for col in columns:
+            x = self.get_by_key(col)[0]
+            estimator = ContinousDistributionEstimator(
+                dist=dist, alpha=alpha
+            ).fit(x)
+            continous_distributions[col] = estimator.get_summary
+
+        self.continous_distributions = continous_distributions
+
+        return self.continous_distributions
+
+    def apply(self, func: callable):
+        data = self.data
+
+        for i in range(data.shape[0]):
+            for j in range(data.shape[1]):
+                data[i, j] = func(self.data[i, j])
+
+        return self.from_numpy(data, self.columns, self.index)
+
+    @property
+    def shape(self):
+        return self.data.shape
+
+    @property
+    def diff(self):
+        """First differences by columns"""
+        rows, cols = self.shape
+        data = np.empty((rows-1, cols))
+
+        for j in range(data.shape[1]):
+            data[:, j] = np.diff(self.data[:, j])
+
+        return self.from_numpy(data, self.columns, self.index[1:])
+
+    def sum(self):
+        pass
+
     def __getitem__(self, key):
         return self.get_by_key(key)[0]
 
@@ -627,7 +741,10 @@ class NumpyDataFrame:
         self.data[tuple(key)] = data
 
     def __str__(self):
-        return str(pd.DataFrame(self.data, columns=self.columns))
+        return str(self.get_data_frame)
+
+    def __repr__(self):
+        return str(self.get_data_frame)
 
 
 if __name__ == '__main__':
