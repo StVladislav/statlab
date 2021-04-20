@@ -665,9 +665,7 @@ class NumpyDataFrame:
 
     def cov(self):
         cov = np.cov(self.data.T)
-        cov = pd.DataFrame(cov, columns=self.columns, index=self.columns)
-
-        return NumpyDataFrame(cov)
+        return self.from_numpy(cov, columns=self.columns, index=self.columns)
 
     @classmethod
     def from_numpy(
@@ -730,8 +728,41 @@ class NumpyDataFrame:
 
         return self.from_numpy(data, self.columns, self.index[1:])
 
-    def sum(self):
-        pass
+    def corr(self):
+        corr = np.corrcoef(self.data.T)
+        return self.from_numpy(corr, columns=self.columns, index=self.columns)
+
+    def sum(self, axis=None):
+        result = None
+
+        if axis == 0:
+            result = np.sum(self.data, axis=axis)
+            result = self.from_numpy(result, columns=self.columns)
+        elif axis == 1:
+            result = np.sum(self.data, axis=axis)
+            result = self.from_numpy(result, index=self.index, columns=['sum'])
+        else:
+            result = np.sum(self.data, axis=axis)
+
+        return result
+
+    def dot(self, other):
+        if isinstance(other, NumpyDataFrame):
+            other = other.data
+
+        result = self.from_numpy(self.data.dot(other))
+
+        if result.shape[1] == len(self.columns):
+            result.columns = self.columns
+
+        if result.shape[0] == len(self.index):
+            result.index = self.index
+
+        return result
+
+    @property
+    def T(self):
+        return self.from_numpy(self.data.T, columns=self.index, index=self.columns)
 
     def __getitem__(self, key):
         return self.get_by_key(key)[0]
@@ -739,6 +770,42 @@ class NumpyDataFrame:
     def __setitem__(self, key, data):
         _, key = self.get_by_key(key)
         self.data[tuple(key)] = data
+
+    def __mul__(self, other):
+        if isinstance(other, NumpyDataFrame):
+            other = other.data
+
+        result = self.data * other
+        return self.from_numpy(result, columns=self.columns, index=self.index)
+
+    def __add__(self, other):
+        if isinstance(other, NumpyDataFrame):
+            other = other.data
+
+        result = self.data + other
+        return self.from_numpy(result, columns=self.columns, index=self.index)
+
+    def __sub__(self, other):
+        if isinstance(other, NumpyDataFrame):
+            other = other.data
+
+        result = self.data - other
+        return self.from_numpy(result, columns=self.columns, index=self.index)
+
+    def __truediv__(self, other):
+        if isinstance(other, NumpyDataFrame):
+            other = other.data
+
+        result = self.data / other
+        return self.from_numpy(result, columns=self.columns, index=self.index)
+
+    def __abs__(self):
+        x = np.abs(self.data)
+        return self.from_numpy(x, columns=self.columns, index=self.index)
+
+    def __round__(self, n: int = 2):
+        result = np.round(self.data, n)
+        return self.from_numpy(result, columns=self.columns, index=self.index)
 
     def __str__(self):
         return str(self.get_data_frame)

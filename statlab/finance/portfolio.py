@@ -10,6 +10,7 @@ from stats_utils import NumpyDataFrame
 
 
 class PortfolioCreator:
+
     shape = None
     portfolio_var = None
     portfolo_std = None
@@ -133,55 +134,89 @@ class PortfolioCreator:
 
 
 class ComponentValueAtRiskPortfolio:
+
     def __init__(
         self,
-        value_at_risk_assets: np.ndarray,
-        portfolio_value_at_risk: float,
-        portfolio_weights: np.ndarray,
         covariance_matrix_assets: np.ndarray,
-        risk_abs: bool = False,
-        portfolio_value: float = 1.0
+        value_at_risk_assets: np.ndarray,
+        portfolio_weights: np.ndarray,
+        portfolio_var: float,
+        portfolio_value_at_risk: float,
+        portfolio_value: float = 1.0,
+        assets_name: List[str] = None
     ):
-        self.diversified_risk = portfolio_value_at_risk * portfolio_value
-        self.undiversified_risk = sum(
-            portfolio_value * portfolio_weights * value_at_risk_assets
-        )
-
         self.portfolio_value_at_risk = portfolio_value_at_risk
-        self.value_at_risk_assets = value_at_risk_assets if not risk_abs else \
-            np.abs(value_at_risk_assets)
-        self.portfolio_value = portfolio_value
         self.covariance_matrix_assets = covariance_matrix_assets
+        self.value_at_risk_assets = value_at_risk_assets
+        self.portfolio_value = portfolio_value
         self.portfolio_weights = portfolio_weights
-        self.portfolio_var = portfolio_weights.dot(
-            covariance_matrix_assets).dot(portfolio_weights.T)
+        self.portfolio_var = portfolio_var
+        self.shape = covariance_matrix_assets.shape[0]
+        self.assets_name = assets_name
 
-        self.betas = self.calculate_betas
-        self.marginal_value_at_risk = self.calculate_marginal_value_at_risk
-        self.component_value_at_risk = self.calculate_component_value_at_risk
+        if assets_name is None:
+            self.assets_name = [f'asset_{i}' for i in range(self.shape)]
 
     @property
-    def calculate_betas(self):
+    def diversified_risk(self) -> float:
+        return self.portfolio_value_at_risk * self.portfolio_value
+
+    @property
+    def undiversified_risk(self) -> float:
+        return np.sum(self.portfolio_value * self.portfolio_weights
+                      * self.value_at_risk_assets)
+
+    @property
+    def betas(self) -> np.ndarray:
         return self.portfolio_weights.dot(self.covariance_matrix_assets) \
             / self.portfolio_var
 
     @property
-    def calculate_marginal_value_at_risk(self):
+    def marginal_value_at_risk(self) -> np.ndarray:
         return self.portfolio_value_at_risk * self.portfolio_value \
             / self.portfolio_value * self.betas
 
     @property
-    def calculate_component_value_at_risk(self):
+    def component_value_at_risk(self) -> np.ndarray:
         return self.portfolio_weights * self.portfolio_value \
             * self.marginal_value_at_risk
 
+    @property
+    def risk_value_assets(self):
+        return self.portfolio_value * self.portfolio_weights \
+            * self.value_at_risk_assets
+
+    def fit(self) -> dict:
+        result = {}
+        result['diversified_risk'] = self.diversified_risk
+        result['undiversified_risk'] = self.undiversified_risk
+        result['betas'] = NumpyDataFrame.from_numpy(
+            self.betas.reshape(1, -1),
+            columns=self.assets_name
+        )
+        result['marginal_value_at_risk'] = NumpyDataFrame.from_numpy(
+            self.marginal_value_at_risk.reshape(1, -1),
+            columns=self.assets_name
+        )
+        result['component_value_at_risk'] = NumpyDataFrame.from_numpy(
+            self.component_value_at_risk,
+            columns=self.assets_name
+        )
+
+        return result
+
 
 class PortfolioOptimization(PortfolioCreator):
+
     prices: NumpyDataFrame = None
     log_yields: NumpyDataFrame = None
     distribution_assets: dict = None
     value_at_risk_assets: dict = None
     expected_yields_assets: dict = None
+    portfolio_value_at_risk: float = None
+    portfolio_yields: NumpyDataFrame = None  # TODO
+    portfolio_distribution: dict = None
+    component_value_at_risk: dict = None
 
     def __init__(
         self,
@@ -190,12 +225,14 @@ class PortfolioOptimization(PortfolioCreator):
         opt_function: str = "markovitz_min_var",
         alpha: float = 0.05,
         alpha_dist: float = 0.1,
-        dist_list: List[str] = None
+        dist_list: List[str] = None,
+        portfolio_value: float = 1.0
 
     ):
         self.alpha = alpha
         self.alpha_dist = alpha_dist
         self.dist_list = dist_list
+        self.portfolio_value = portfolio_value
 
         super().__init__(
             min_bound=min_bound,
@@ -245,7 +282,41 @@ class PortfolioOptimization(PortfolioCreator):
             columns=self.prices.columns
         )
 
+        self.portfolio_yields = self.log_yields.data.dot(
+            self.weights.data.T
+        ).ravel()
+
+        portfolio_value_at_risk = ValueAtRiskParametric(
+            self.portfolio_yields,
+            self.alpha_dist,
+            self.dist_list,
+            is_log_yields=True
+        ).fit(self.alpha)
+
+        self.portfolio_distribution: dict = portfolio_value_at_risk.dist
+        self.portfolio_value_at_risk: float = portfolio_value_at_risk.current_risk
+        self.component_value_at_risk: dict = self.get_component_value_at_risk()
+
         return self
+
+    def calculate_portfolio_yields(self, x, is_log_yields: bool = False):
+        pass
+
+    def calculate_portfolio_value(self):
+        pass
+
+    def get_component_value_at_risk(self) -> dict:
+        cvar = ComponentValueAtRiskPortfolio(
+            covariance_matrix_assets=self.covariance.data,
+            value_at_risk_assets=self.value_at_risk_assets.data,
+            portfolio_weights=self.weights.data,
+            portfolio_var=self.portfolio_var,
+            portfolio_value_at_risk=self.portfolio_value_at_risk,
+            portfolio_value=self.portfolio_value,
+            assets_name=self.prices.columns
+        ).fit()
+
+        return cvar
 
 
 if __name__ == "__main__":
@@ -255,7 +326,8 @@ if __name__ == "__main__":
     X = pd.DataFrame(X, columns=cols)
     port = PortfolioOptimization(
         opt_function='sharpe_ratio',
-        max_bound=0.4
+        max_bound=0.4,
+        portfolio_value=15000
     ).fit(X)
 
     print(port.covariance)
@@ -263,3 +335,8 @@ if __name__ == "__main__":
     print(port.expected_yields_assets)
     print(port.weights)
     print(port.opt_results)
+
+    print(port.component_value_at_risk['diversified_risk'])
+    print(port.component_value_at_risk['undiversified_risk'])
+    print(port.component_value_at_risk['marginal_value_at_risk'])
+    print(port.component_value_at_risk['component_value_at_risk'])
