@@ -466,5 +466,5 @@ class SimpleArima(ArimaModel):
 
 if __name__ == '__main__':
     y = tfp.distributions.Normal(loc=0, scale=1).sample(100).numpy()
-    model = SimpleArima(ar=1, ma=1, loss='loglike_student').auto_arima(y, by='aic', max_lagg=3)
+    model = SimpleArima(ar=1, ma=1, loss='loglike_student').auto_arima(y, by='aic', max_lagg=2)
     model()
