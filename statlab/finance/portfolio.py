@@ -1,3 +1,4 @@
+from scipy.linalg import qr
 from typing import List
 
 import numpy as np
@@ -202,6 +203,7 @@ class ComponentValueAtRiskPortfolio:
             self.component_value_at_risk,
             columns=self.assets_name
         )
+        result['risk_value_assets'] = self.risk_value_assets
 
         return result
 
@@ -319,6 +321,123 @@ class PortfolioOptimization(PortfolioCreator):
         return cvar
 
 
+def back_substitution(a: np.ndarray, b: np.ndarray):
+    a = a.astype(float)
+    b = b.astype(float).ravel()
+
+    x = np.zeros_like(b)
+    m = a.shape[0]
+
+    x[m-1] = b[m-1] / a[m-1, m-1]
+
+    for i in range(m-2, -1, -1):
+        temp = 0
+
+        for j in range(i, m):
+            temp += a[i, j] * x[j]
+
+        x[i] = (b[i] - temp) / a[i, i]
+
+    return x.reshape(-1, 1)
+
+
+def inverse_matrix(a: np.ndarray):
+    q, r = np.linalg.qr(a)
+    x = None
+
+    for i in range(a.shape[0]):
+        eye = np.zeros(a.shape[0], dtype=float)
+        eye[i] = 1.0
+        solve = back_substitution(r, eye)
+
+        if x is None:
+            x = solve
+            continue
+
+        x = np.c_[x, solve]
+
+    return x @ q.T
+
+
+def invert_matrix(A: np.ndarray, tol: float = None):
+    """
+    GAUSS JORDAN
+    Returns the inverse of the passed in matrix.
+        :param A: The matrix to be inversed
+
+        :return: The inverse of the matrix A
+    """
+
+    n = len(A)
+    AM = A.copy()
+    I = np.eye(n)
+    IM = I.copy()
+
+    indices = list(range(n))  # to allow flexible row referencing ***
+    for fd in range(n):  # fd stands for focus diagonal
+        fdScaler = 1.0 / AM[fd][fd]
+        # FIRST: scale fd row with fd inverse.
+        for j in range(n):  # Use j to indicate column looping.
+            AM[fd][j] *= fdScaler
+            IM[fd][j] *= fdScaler
+        # SECOND: operate on all rows except fd row as follows:
+        for i in indices[0:fd] + indices[fd+1:]:
+            # *** skip row with fd in it.
+            crScaler = AM[i][fd]  # cr stands for "current row".
+            for j in range(n):
+                # cr - crScaler * fdRow, but one element at a time.
+                AM[i][j] = AM[i][j] - crScaler * AM[fd][j]
+                IM[i][j] = IM[i][j] - crScaler * IM[fd][j]
+
+    # Section 4: Make sure IM is an inverse of A with specified tolerance
+    return IM
+
+
+def prib(v1, v2, p1, p2, p3):
+    delta1 = v1 / p1
+    delta2 = v2 / p2
+
+    return (delta1 + delta2) * p3
+
+
+m = np.array([1, 1, 3, 2, 1, 4, 5, 4, 1], dtype=float).reshape(3, 3)
+m = np.array([52, 30, 49, 28, 30, 50, 8, 44, 49, 8, 46, 16,
+             28, 44, 16, 22], dtype=float).reshape(4, 4)
+x = m.copy()
+pq = np.diag(np.ones(m.shape[0]))
+
+
+for _ in range(10):
+    q, r = qr(x)
+    pq = pq @ q
+    x = r @ q
+
+eig1 = np.diag(x)
+eig1 = np.c_[eig1[0], eig1[2], eig1[1]]
+eig1 = eig1.ravel()
+pq = pq[:, [0, 2, 1]]
+
+np.allclose(m @ pq[:, 0], eig1[0] * pq[:, 0], 0.1)
+np.allclose(m @ pq[:, 1], eig1[1] * pq[:, 1], 0.1)
+np.allclose(m @ pq[:, 2], eig1[2] * pq[:, 2], 0.1)
+
+
+eig, evec = np.linalg.eig(m)
+np.allclose(m @ evec[:, 0], eig[0] * evec[:, 0], 0.05)
+np.allclose(m @ evec[:, 1], eig[1] * evec[:, 1], 0.05)
+np.allclose(m @ evec[:, 2], eig[2] * evec[:, 2], 0.05)
+
+
+def cvar(ret, std, alpha: float = 0.05):
+    cvar = alpha**-1 * sts.norm.pdf(sts.norm.pdf(alpha)) * std - ret
+
+    return cvar
+
+
+def var(ret, std, alpha: float = 0.05):
+    return sts.norm.ppf(alpha) * std - ret
+
+
 if __name__ == "__main__":
     X = sts.norm(loc=10000, scale=20000).rvs(size=(100, 5))
     X += 10000000
@@ -336,7 +455,17 @@ if __name__ == "__main__":
     print(port.weights)
     print(port.opt_results)
 
+    print('diversified_risk')
     print(port.component_value_at_risk['diversified_risk'])
+    print('--' * 10)
+    print('undiversified_risk')
     print(port.component_value_at_risk['undiversified_risk'])
+    print('--' * 10)
+    print('marginal_value_at_risk')
     print(port.component_value_at_risk['marginal_value_at_risk'])
+    print('--' * 10)
+    print('component_value_at_risk')
     print(port.component_value_at_risk['component_value_at_risk'])
+    print('--' * 10)
+    print('risk_value_assets')
+    print(port.component_value_at_risk['risk_value_assets'])

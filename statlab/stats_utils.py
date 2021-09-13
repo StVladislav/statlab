@@ -658,7 +658,6 @@ class NumpyDataFrame:
         return new, key
 
     def value_mapper(self, mapper):
-
         for i in range(self.data.shape[0]):
             for j in range(self.data.shape[1]):
                 self.data[i, j] = mapper(self.data[i, j])
@@ -778,12 +777,18 @@ class NumpyDataFrame:
         result = self.data * other
         return self.from_numpy(result, columns=self.columns, index=self.index)
 
+    def __rmul__(self, other):
+        return self * other
+
     def __add__(self, other):
         if isinstance(other, NumpyDataFrame):
             other = other.data
 
         result = self.data + other
         return self.from_numpy(result, columns=self.columns, index=self.index)
+
+    def __radd__(self, other):
+        return self + other
 
     def __sub__(self, other):
         if isinstance(other, NumpyDataFrame):
@@ -792,11 +797,25 @@ class NumpyDataFrame:
         result = self.data - other
         return self.from_numpy(result, columns=self.columns, index=self.index)
 
+    def __rsub__(self, other):
+        if isinstance(other, NumpyDataFrame):
+            other = other.data
+
+        result = other - self.data
+        return self.from_numpy(result, columns=self.columns, index=self.index)
+
     def __truediv__(self, other):
         if isinstance(other, NumpyDataFrame):
             other = other.data
 
         result = self.data / other
+        return self.from_numpy(result, columns=self.columns, index=self.index)
+
+    def __rtruediv__(self, other):
+        if isinstance(other, NumpyDataFrame):
+            other = other.data
+
+        result = other / self.data
         return self.from_numpy(result, columns=self.columns, index=self.index)
 
     def __abs__(self):

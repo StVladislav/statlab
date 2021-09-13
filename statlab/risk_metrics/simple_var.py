@@ -1,3 +1,7 @@
+import matplotlib.pyplot as plt
+from scipy.spatial.distance import cosine
+from sklearn.linear_model import Ridge
+import scipy.stats as sts
 import numpy as np
 
 from distributions import ContinousDistributionEstimator
