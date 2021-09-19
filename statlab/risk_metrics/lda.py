@@ -6,8 +6,8 @@ from distributions import ContinousDistributionEstimator, DiscreteDistributionEs
 
 class LossDistributionApproach:
 
-    __slots__ = ['losses', 'events', 'continuous_distribution', 'discrete_distribution', 'alpha', 'samples',
-                 'lda_risk', 'extreme_duration', 'asset_name', 'negative']
+    __slots__ = ['losses', 'events', 'continuous_distribution', 'discrete_distribution', 'alpha',
+                 'samples', 'lda_risk', 'extreme_duration', 'asset_name', 'negative']
 
     _assets = []
 
@@ -20,12 +20,14 @@ class LossDistributionApproach:
             alpha: float = 0.05,
             negative: bool = False,
             samples: int = 10000,
-            asset_name: str = 'Name'
+            asset_name: str = 'Name',
     ):
 
         assert 0 <= alpha <= 1, 'Incorrect alpha in LossDistributionApproach. It must be in (0, 1)'
-        assert losses.dtype != np.object, 'dtype values of losses in LossDistributionApproach is np.object'
-        assert events.dtype != np.object, 'dtype values of events in LossDistributionApproach is np.object'
+        assert not isinstance(losses.dtype, np.object_), 'dtype values of losses in ' \
+                                                         'LossDistributionApproach is np.object '
+        assert not isinstance(events.dtype, np.object_), 'dtype values of events in ' \
+                                                         'LossDistributionApproach is np.object '
 
         self.losses = losses if not negative else losses * -1
         self.events = events
@@ -56,9 +58,7 @@ class LossDistributionApproach:
             self.fit()
 
         events = self.discrete_distribution.function.rvs(self.samples)
-        losses = np.array([
-            self.continuous_distribution.function.rvs(i) for i in events
-        ])
+        losses = [np.mean(self.continuous_distribution.function.rvs(i)) for i in events if i != 0]
 
         return events, losses
 
@@ -88,7 +88,8 @@ class LossDistributionApproach:
         if self.discrete_distribution.function is None:
             self.fit()
 
-        return self.discrete_distribution.function.ppf(1 - self.alpha) * self.continuous_distribution.function.mean()
+        return self.discrete_distribution.function.ppf(1 - self.alpha) * \
+               self.continuous_distribution.function.mean()
 
     @property
     def extreme_risk_mean_events(self) -> float:
@@ -96,7 +97,8 @@ class LossDistributionApproach:
         if self.discrete_distribution.function is None:
             self.fit()
 
-        return self.discrete_distribution.function.mean() * self.continuous_distribution.function.ppf(self.alpha)
+        return self.discrete_distribution.function.mean() * \
+               self.continuous_distribution.function.ppf(self.alpha)
 
     @property
     def _summary(self) -> list:
@@ -125,7 +127,7 @@ class LossDistributionApproach:
         print(tabulate.tabulate(self._summary))
 
     def __str__(self):
-        return f'LDA of {self.asset_name} is {self.lda_risk}\nDiscrete dist is {self.discrete_distribution.dist}'
+        return f'LDA of {self.asset_name} is {self.lda_risk}\nDiscrete dist is {self.discrete_distribution.dist} '
 
 
 if __name__ == '__main__':

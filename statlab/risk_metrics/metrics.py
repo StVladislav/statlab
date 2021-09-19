@@ -1,5 +1,36 @@
 import numpy as np
 import scipy.stats as sts
+from preprocessing.timeseries import points_of_crossing
+
+
+def maxdrawdown_by_trend(close, trend):
+    cross = points_of_crossing(close, trend)
+    drawdowns_yields = []
+    drawdowns_indices = []
+    drawdowns_time = []
+    for i in range(len(cross['all'])-1):
+        start = cross['all'][i]
+        end = cross['all'][i+1]
+
+        if start - end == 0:
+            if close[start] > close[end]:
+                drawdowns_indices.append(end)
+                drawdowns_yields.append(np.log(close[end] / close[start]))
+                drawdowns_time.append(1)
+                continue
+        dd = np.min(np.log(close[start : end + 1] / close[start]))
+        dd_ind = np.argmin(np.log(close[start : end + 1] / close[start]))
+        if dd < 0:
+            drawdowns_yields.append(dd)
+            drawdowns_indices.append(cross['all'][i] + dd_ind)
+            drawdowns_time.append(drawdowns_indices[-1] - start)
+    res = {
+        'drawdowns_yields': np.array(drawdowns_yields),
+        'drawdowns_time': np.array(drawdowns_time),
+        'drawdowns_indices': np.array(drawdowns_indices)
+    }
+
+    return res
 
 
 def maxdrawdown(series: np.ndarray) -> tuple:

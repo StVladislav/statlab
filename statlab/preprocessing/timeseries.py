@@ -7,6 +7,25 @@ from stats_utils import array_fill_nan
 from errors import LengthCriteria, IncorrectType, IncorrectValue
 
 
+def points_of_crossing(price, trend):
+    trend_gap = price - trend
+    cross_points = {
+        'up': [],
+        'down': [],
+        'all': []
+    }
+
+    for i in range(1, len(trend_gap)):
+        if trend_gap[i] > 0 >= trend_gap[i - 1]:
+            cross_points['up'].append(i - 1)
+            cross_points['all'].append(i - 1)
+        elif trend_gap[i] < 0 <= trend_gap[i - 1]:
+            cross_points['down'].append(i - 1)
+            cross_points['all'].append(i - 1)
+
+    return cross_points
+
+
 def ewma_calc(x: float or int, prev: float or int, alpha: float = 0.4) -> float:
     """Calculates EWMA with slope alpha at time t of
     any time series
