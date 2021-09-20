@@ -104,6 +104,22 @@ def maxdrawdown(series: np.ndarray) -> tuple:
     return to_ret
 
 
+def get_drawdown_time(close, trend):
+    trend_gap = close - trend
+    gap_time = []
+    t = 0
+    for i in trend_gap:
+        if not t:
+            if i < 0:
+                t += 1
+        elif i <= 0:
+            t += 1
+        elif i > 0:
+            gap_time.append(t)
+            t = 0
+    return gap_time
+
+
 def kupiec_test():
     """Kupiec test for evaluation of VaR estimations
     """
