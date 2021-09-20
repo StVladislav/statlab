@@ -36,3 +36,5 @@ class StochasticDrawdownApproach:
         self.current_risk['yield_risk'] = dist_of_risks.function.ppf(self.alpha)
         self.current_risk['time_risk'] = dist_of_time.function.ppf(1 - self.alpha)
         self.summary = {**self.summary, **self.current_risk}
+
+        return self
